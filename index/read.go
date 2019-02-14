@@ -72,6 +72,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 )
 
 const (
@@ -91,6 +92,8 @@ type Index struct {
 	numName   int
 	numPost   int
 }
+
+var g_indexfile string
 
 const postEntrySize = 3 + 4 + 4
 
@@ -426,9 +429,40 @@ func mmap(file string) mmapData {
 	return mmapFile(f)
 }
 
+func SetFile(fn string){
+	if fn == ""{
+		found := ""
+		dir,_ := os.Getwd()
+		for {
+			fi, err := os.Stat(dir + "/.csearchindex")
+			if err == nil && ! fi.IsDir() {
+				found = dir + "/.csearchindex"
+				break
+			}
+			if dir == "/"{
+				break
+			}
+			dir,_ = filepath.Abs(dir + "/..")
+		}
+		g_indexfile = found
+		return
+	}
+	fi,err := os.Stat(fn)
+	if err==nil && fi.IsDir() {
+		if ! strings.HasSuffix(fn, "/"){
+			fn += "/"
+		}
+		fn += ".csearchindex"
+	}
+	g_indexfile = fn
+}
+
 // File returns the name of the index file to use.
 // It is either $CSEARCHINDEX or $HOME/.csearchindex.
 func File() string {
+	if g_indexfile != "" {
+		return g_indexfile
+	}
 	f := os.Getenv("CSEARCHINDEX")
 	if f != "" {
 		return f

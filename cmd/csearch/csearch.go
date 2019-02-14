@@ -11,8 +11,8 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/google/codesearch/index"
-	"github.com/google/codesearch/regexp"
+	"codesearch/index"
+	"codesearch/regexp"
 )
 
 var usageMessage = `usage: csearch [-c] [-f fileregexp] [-h] [-i] [-l] [-n] regexp
@@ -51,6 +51,7 @@ var (
 	verboseFlag = flag.Bool("verbose", false, "print extra information")
 	bruteFlag   = flag.Bool("brute", false, "brute force - search all files in index")
 	cpuProfile  = flag.String("cpuprofile", "", "write cpu profile to this file")
+	indfile = flag.String("d", "", "index db filename")
 
 	matches bool
 )
@@ -65,6 +66,7 @@ func Main() {
 	flag.Usage = usage
 	flag.Parse()
 	args := flag.Args()
+	index.SetFile(*indfile)
 
 	if len(args) != 1 {
 		usage()

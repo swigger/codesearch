@@ -12,44 +12,19 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"sort"
-
-	"github.com/google/codesearch/index"
+	"codesearch/index"
+	"strings"
 )
 
-var usageMessage = `usage: cindex [-list] [-reset] [path...]
+var usageMessage = `usage: cindex [-d indexdb|indexdb_dir] path [path...]
+usage: cindex [-d indexdb] -list
 
-Cindex prepares the trigram index for use by csearch.  The index is the
-file named by $CSEARCHINDEX, or else $HOME/.csearchindex.
-
-The simplest invocation is
-
-	cindex path...
-
-which adds the file or directory tree named by each path to the index.
-For example:
-
-	cindex $HOME/src /usr/include
-
-or, equivalently:
-
-	cindex $HOME/src
-	cindex /usr/include
-
-If cindex is invoked with no paths, it reindexes the paths that have
-already been added, in case the files have changed.  Thus, 'cindex' by
-itself is a useful command to run in a nightly cron job.
-
-The -list flag causes cindex to list the paths it has indexed and exit.
-
-By default cindex adds the named paths to the index but preserves 
-information about other paths that might already be indexed
-(the ones printed by cindex -list).  The -reset flag causes cindex to
-delete the existing index before indexing the new paths.
-With no path arguments, cindex -reset removes the index.
+indexfile is specified, or search in curdir to / for name .csearchindex or
+$CSEARCHINDEX or $HOME/.csearchindex
 `
 
 func usage() {
-	fmt.Fprintf(os.Stderr, usageMessage)
+	_,_ = fmt.Fprintf(os.Stderr, usageMessage)
 	os.Exit(2)
 }
 
@@ -58,12 +33,52 @@ var (
 	resetFlag   = flag.Bool("reset", false, "discard existing index")
 	verboseFlag = flag.Bool("verbose", false, "print extra information")
 	cpuProfile  = flag.String("cpuprofile", "", "write cpu profile to this file")
+	indfile = flag.String("d", "", "the index db filename")
+	filetypes = flag.String("ft", "c|cpp|cxx|cc|inc|asm|s|h|hh|hxx|hpp|def|hdr|y|lex|yy", "file types")
 )
 
+func keepElem(elem string, isdir bool) bool{
+	if elem[0] == '.' || elem[0] == '#' || elem[0] == '~' || elem[len(elem)-1] == '~' {
+		return false
+	}
+	if isdir {
+		if elem == "test" || elem == "tests" || elem == "testsuite" || elem == "testsuites"{
+			return false
+		}
+		return true
+	}
+	// skip foo_test.c
+	if strings.Index(elem, "_test.") >= 0{
+		return false
+	}
+	// skip test_foo.c
+	if strings.HasPrefix(elem, "test_") {
+		return false
+	}
+	pos := strings.LastIndex(elem, ".")
+	if pos < 0{
+		return false
+	}
+	fext := strings.ToLower(elem[pos+1:])
+
+	arr := strings.Split(*filetypes, "|")
+	for _,o := range arr{
+		if o == fext{
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
+	if len(os.Args) <= 1{
+		usage()
+		return
+	}
 	flag.Usage = usage
 	flag.Parse()
 	args := flag.Args()
+	index.SetFile(*indfile)
 
 	if *listFlag {
 		ix := index.Open(index.File())
@@ -126,10 +141,13 @@ func main() {
 	ix.AddPaths(args)
 	for _, arg := range args {
 		log.Printf("index %s", arg)
-		filepath.Walk(arg, func(path string, info os.FileInfo, err error) error {
+		_ = filepath.Walk(arg, func(path string, info os.FileInfo, err error) error {
+			if err!=nil{
+				_,_ = fmt.Fprintf(os.Stderr, "%s err: %s", path, err)
+				return nil
+			}
 			if _, elem := filepath.Split(path); elem != "" {
-				// Skip various temporary or "hidden" files or directories.
-				if elem[0] == '.' || elem[0] == '#' || elem[0] == '~' || elem[len(elem)-1] == '~' {
+				if ! keepElem(elem, info.IsDir()){
 					if info.IsDir() {
 						return filepath.SkipDir
 					}
