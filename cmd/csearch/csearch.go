@@ -15,7 +15,7 @@ import (
 	"codesearch/regexp"
 )
 
-var usageMessage = `usage: csearch [-c] [-f fileregexp] [-h] [-i] [-l] [-n] regexp
+var usageMessage = `usage: csearch [-d indexdb.fn] [-c] [-f fileregexp] [-h] [-i] [-l] [-n] regexp
 
 Csearch behaves like grep over all indexed files, searching for regexp,
 an RE2 (nearly PCRE) regular expression.
@@ -27,17 +27,8 @@ cannot be abbreviated to -in.
 The -f flag restricts the search to files whose names match the RE2 regular
 expression fileregexp.
 
-Csearch relies on the existence of an up-to-date index created ahead of time.
-To build or rebuild the index that csearch uses, run:
-
-	cindex path...
-
-where path... is a list of directories or individual files to be included in the index.
-If no index exists, this command creates one.  If an index already exists, cindex
-overwrites it.  Run cindex -help for more.
-
-Csearch uses the index stored in $CSEARCHINDEX or, if that variable is unset or
-empty, $HOME/.csearchindex.
+indexfile is specified, or search in curdir to / for name .csearchindex or
+$CSEARCHINDEX or $HOME/.csearchindex
 `
 
 func usage() {

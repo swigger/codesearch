@@ -102,6 +102,9 @@ func main() {
 		os.Remove(index.File())
 		return
 	}
+	if *indfile == "" {
+		index.SetFile("./.csearchindex")
+	}
 	if len(args) == 0 {
 		ix := index.Open(index.File())
 		for _, arg := range ix.Paths() {
