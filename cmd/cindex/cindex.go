@@ -45,6 +45,9 @@ func keepElem(elem string, isdir bool) bool{
 		if elem == "test" || elem == "tests" || elem == "testsuite" || elem == "testsuites"{
 			return false
 		}
+		if elem == "unittests" || elem == "unittest" {
+			return false
+		}
 		return true
 	}
 	// skip foo_test.c
