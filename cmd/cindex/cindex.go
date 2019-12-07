@@ -16,8 +16,12 @@ import (
 	"strings"
 )
 
-var usageMessage = `usage: cindex [-d indexdb|indexdb_dir] path [path...]
-usage: cindex [-d indexdb] -list
+var usageMessage = `usage: cindex FLAGS path [path...]
+FLAGS:
+-d indexdb|indexdir: for dir to place db file.
+-allowtest: allow test(s) dir.
+-verbose: verbose
+-ft sss: file types
 
 indexfile is specified, or search in curdir to / for name .csearchindex or
 $CSEARCHINDEX or $HOME/.csearchindex
@@ -29,20 +33,27 @@ func usage() {
 }
 
 var (
+	allowt = flag.Bool("allowtest", false, "allow test(s) dir")
 	listFlag    = flag.Bool("list", false, "list indexed paths and exit")
 	resetFlag   = flag.Bool("reset", false, "discard existing index")
 	verboseFlag = flag.Bool("verbose", false, "print extra information")
 	cpuProfile  = flag.String("cpuprofile", "", "write cpu profile to this file")
 	indfile = flag.String("d", "", "the index db filename")
-	filetypes = flag.String("ft", "c|cpp|cxx|cc|inc|asm|s|h|hh|hxx|hpp|def|hdr|y|lex|yy", "file types")
+	filetypes = flag.String("ft", "c|cpp|cxx|cc|inc|asm|s|h|hh|hxx|hpp|def|hdr|y|lex|yy|m|mm", "file types")
 )
 
 func keepElem(elem string, isdir bool) bool{
+	if *verboseFlag {
+		_,_ = fmt.Fprintf(os.Stderr, "checking %s\n", elem)
+	}
 	if elem[0] == '.' || elem[0] == '#' || elem[0] == '~' || elem[len(elem)-1] == '~' {
 		return false
 	}
 	if isdir {
-		if elem == "test" || elem == "tests" || elem == "testsuite" || elem == "testsuites"{
+		if elem == "test" || elem == "tests" {
+			return *allowt
+		}
+		if elem == "testsuite" || elem == "testsuites" {
 			return false
 		}
 		if elem == "unittests" || elem == "unittest" {
